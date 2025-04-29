@@ -76,14 +76,14 @@
                                     <li><a class="dropdown-item" href="{{ url_for('admin.manage_users') }}">Manage Users</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('admin.stats') }}">Statistics</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    {# --- CORRECTED LOGOUT LINK --- #}
                                     <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Admin Logout</a></li>
                                 </ul>
                             </li>
                         {% else %}
                             <!-- Customer Links -->
                              <li class="nav-item">
-                                <a class="nav-link cart-icon px-2" href="{{ url_for('customer.cart') }}" title="Shopping Cart">
+                                 {# --- CORRECTED CART LINK --- #}
+                                <a class="nav-link cart-icon px-2" href="{{ url_for('customer.view_cart') }}" title="Shopping Cart">
                                     <i class="bi bi-cart3 fs-5"></i> {# Larger icon #}
                                     {% if cart_item_count > 0 %}
                                         <span class="cart-count">{{ cart_item_count }}</span>
@@ -100,7 +100,6 @@
                                     <li><a class="dropdown-item" href="{{ url_for('customer.profile') }}">My Profile</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('customer.order_history') }}">My Orders</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    {# Customer logout also uses auth.logout #}
                                     <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a></li>
                                 </ul>
                             </li>
