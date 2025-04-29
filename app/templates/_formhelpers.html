@@ -1,0 +1,30 @@
+{% macro render_field(field, placeholder=None, type=None, **kwargs) %}
+  <div class="mb-3">
+    {{ field.label(class="form-label") }}
+    {% set class_list = ["form-control"] %}
+    {% if field.errors %}
+      {% do class_list.append("is-invalid") %}
+    {% endif %}
+    {% if type %}
+      {{ field(class=" ".join(class_list), placeholder=placeholder or field.label.text, type=type, **kwargs) }}
+    {% else %}
+       {{ field(class=" ".join(class_list), placeholder=placeholder or field.label.text, **kwargs) }}
+    {% endif %}
+
+    {% if field.errors %}
+      <div class="invalid-feedback">
+        {% for error in field.errors %}
+          <span>{{ error }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+     {% if field.description %}
+        <div class="form-text">{{ field.description }}</div>
+     {% endif %}
+  </div>
+{% endmacro %}
+
+{# Example Usage in another template:
+   {{ render_field(form.name) }}
+   {{ render_field(form.price, type="number") }}
+#}

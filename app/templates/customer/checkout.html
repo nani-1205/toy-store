@@ -1,0 +1,84 @@
+{% extends "base.html" %} {# Or extend customer_base.html if using it #}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %} {# Or block customer_content if extending customer_base.html #}
+<h1 class="mb-4">Checkout</h1>
+
+<div class="row g-5">
+    <!-- Order Summary -->
+    <div class="col-md-5 col-lg-4 order-md-last">
+        <h4 class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-primary">Your Order Summary</span>
+            <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
+        </h4>
+        <ul class="list-group mb-3 shadow-sm">
+            {% for item in cart_items %}
+            <li class="list-group-item d-flex justify-content-between lh-sm">
+                <div>
+                    <h6 class="my-0">{{ item.name }}</h6>
+                    <small class="text-muted">Qty: {{ item.quantity }} @ {{ item.price | inr }}</small>
+                </div>
+                <span class="text-muted">{{ item.subtotal | inr }}</span>
+            </li>
+            {% endfor %}
+            <li class="list-group-item d-flex justify-content-between bg-light">
+                <span class="fw-bold">Total (INR)</span>
+                <strong class="fw-bold">{{ total_price | inr }}</strong>
+            </li>
+        </ul>
+         <div class="card p-3 shadow-sm">
+            <h5 class="text-center mb-2"><i class="bi bi-cash-coin"></i> Payment Method</h5>
+             <p class="text-center text-muted mb-0"><i class="bi bi-truck"></i> <strong>Cash on Delivery</strong></p>
+             <small class="text-center text-muted mt-1">You will pay the delivery person when your order arrives.</small>
+         </div>
+    </div>
+
+    <!-- Billing Address Form -->
+    <div class="col-md-7 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h4 class="mb-0">Shipping Address & Contact</h4>
+            </div>
+            <div class="card-body">
+                 {% if not current_user.address or not current_user.phone %}
+                  <div class="alert alert-info small">
+                      Please confirm or provide your shipping details below. These details will be used for this order. You can also update them in your profile later.
+                  </div>
+                 {% endif %}
+                <form method="POST" action="{{ url_for('customer.checkout') }}" novalidate>
+                    {{ form.hidden_tag() }} {# Assumes form is passed from route #}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            {{ form.address.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), rows=4, placeholder="Enter your full shipping address including Pincode") }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.address.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                         </div>
+
+                         <div class="col-12">
+                            {{ form.phone.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), placeholder="Enter your 10-digit mobile number for delivery updates") }}
+                             {% if form.phone.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.phone.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                         </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary btn-lg", value="Place Order (Pay on Delivery)") }}
+                     </div>
+                     <p class="text-center small text-muted mt-3">By placing this order, you agree to our Terms & Conditions.</p>
+                </form>
+            </div> {# End card-body #}
+        </div> {# End card #}
+    </div> {# End col #}
+</div> {# End row #}
+{% endblock %}

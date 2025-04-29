@@ -1,0 +1,70 @@
+{% extends "base.html" %} {# Assumes you have a base.html with navbar, footer, flash messages etc. #}
+
+{% block title %}Customer Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-lg-5">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <h2 class="card-title text-center mb-4 fw-bold">Customer Login</h2>
+                <p class="text-center text-muted mb-4">Access your account to view orders and manage your profile.</p>
+
+                <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                    {{ form.hidden_tag() }} {# CSRF Token - Important! #}
+
+                    {# Email Field #}
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control form-control-lg" + (" is-invalid" if form.email.errors else ""), placeholder="Enter your email address") }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Password Field #}
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control form-control-lg" + (" is-invalid" if form.password.errors else ""), placeholder="Enter your password") }}
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Remember Me & Forgot Password Row #}
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            {{ form.remember(class="form-check-input") }}
+                            {{ form.remember.label(class="form-check-label small") }}
+                        </div>
+                        {# Add password reset link later if implemented #}
+                        {# <a href="#" class="small text-decoration-none">Forgot Password?</a> #}
+                    </div>
+
+                    {# Submit Button #}
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    </div>
+                </form> {# End Form #}
+
+                <hr class="my-4">
+
+                {# Links to Signup and Admin Login #}
+                <div class="text-center">
+                    <p class="mb-2">
+                        Don't have an account? <a href="{{ url_for('auth.signup') }}" class="fw-medium">Sign up here</a>
+                    </p>
+                    <p class="mb-0">
+                         <a href="{{ url_for('auth.admin_login') }}" class="text-muted small">Admin Login</a>
+                    </p>
+                </div>
+
+            </div> {# End card-body #}
+        </div> {# End card #}
+    </div> {# End col #}
+</div> {# End row #}
+{% endblock %}

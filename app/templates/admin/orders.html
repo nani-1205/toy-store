@@ -1,0 +1,68 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Manage Customer Orders</h2>
+    <div>
+        <div class="btn-group">
+          <a href="{{ url_for('admin.manage_orders') }}" class="btn btn-sm {{ 'btn-primary' if not current_filter else 'btn-outline-secondary' }}">All</a>
+          <a href="{{ url_for('admin.manage_orders', status='Pending') }}" class="btn btn-sm {{ 'btn-primary' if current_filter == 'Pending' else 'btn-outline-secondary' }}">Pending</a>
+          <a href="{{ url_for('admin.manage_orders', status='Accepted') }}" class="btn btn-sm {{ 'btn-primary' if current_filter == 'Accepted' else 'btn-outline-secondary' }}">Accepted</a>
+          <a href="{{ url_for('admin.manage_orders', status='Shipped') }}" class="btn btn-sm {{ 'btn-primary' if current_filter == 'Shipped' else 'btn-outline-secondary' }}">Shipped</a>
+          <a href="{{ url_for('admin.manage_orders', status='Delivered') }}" class="btn btn-sm {{ 'btn-primary' if current_filter == 'Delivered' else 'btn-outline-secondary' }}">Delivered</a>
+          <a href="{{ url_for('admin.manage_orders', status='Cancelled') }}" class="btn btn-sm {{ 'btn-primary' if current_filter == 'Cancelled' else 'btn-outline-secondary' }}">Cancelled</a>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Date Placed</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td><code>{{ order._id }}</code></td>
+                <td>
+                    {{ order.user_username | default('N/A', true) }}<br>
+                    <small class="text-muted">{{ order.user_email | default('N/A', true) }}</small>
+                </td>
+                <td>{{ order.created_at | datetime_ist }}</td>
+                <td>{{ order.total_amount | inr }}</td>
+                <td>
+                    {% set status_class = {
+                        'Pending': 'warning',
+                        'Accepted': 'info',
+                        'Shipped': 'primary',
+                        'Delivered': 'success',
+                        'Cancelled': 'danger'
+                    }.get(order.status, 'secondary') %}
+                    <span class="badge bg-{{ status_class }}">{{ order.status }}</span>
+                </td>
+                 <td>
+                     <span class="badge bg-light text-dark">{{ order.payment_method | default('N/A', true) }}</span>
+                 </td>
+                <td>
+                    <a href="{{ url_for('admin.view_order', order_id=order._id) }}" class="btn btn-sm btn-info" title="View Details">
+                        <i class="bi bi-eye-fill"></i> View
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center">No orders found{% if current_filter %} matching filter '{{ current_filter }}'{% endif %}.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

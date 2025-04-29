@@ -1,0 +1,87 @@
+{% extends "base.html" %} {# Or extend customer_base.html if using it #}
+
+{% block title %}Your Shopping Cart{% endblock %}
+
+{% block content %} {# Or block customer_content if extending customer_base.html #}
+<h1 class="mb-4">Your Shopping Cart</h1>
+
+{% if cart_items %}
+<div class="card shadow-sm">
+    <div class="card-body p-0"> {# Remove padding for full-width table #}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0"> {# Removed border, added hover #}
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 10%;" class="ps-3">Image</th>
+                        <th scope="col" style="width: 30%;">Product</th>
+                        <th scope="col" style="width: 15%; text-align: right;">Price</th>
+                        <th scope="col" style="width: 15%; text-align: center;">Quantity</th>
+                        <th scope="col" style="width: 15%; text-align: right;">Subtotal</th>
+                        <th scope="col" style="width: 15%; text-align: center;" class="pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                    <tr>
+                        <td class="ps-3">
+                            <a href="{{ url_for('customer.toy_detail', toy_id=item.id) }}">
+                                <img src="{{ item.image_url or url_for('static', filename='images/default_toy.png') }}" class="img-fluid rounded" style="max-height: 60px; max-width: 60px; object-fit: contain;" alt="{{ item.name }}">
+                            </a>
+                        </td>
+                        <td><a href="{{ url_for('customer.toy_detail', toy_id=item.id) }}" class="text-decoration-none text-dark fw-medium">{{ item.name }}</a></td>
+                        <td style="text-align: right;">{{ item.price | inr }}</td>
+                        <td style="text-align: center;">
+                            {# Update quantity form #}
+                            <form action="{{ url_for('customer.update_cart_item', toy_id=item.id) }}" method="POST" class="d-inline-flex align-items-center justify-content-center" novalidate>
+                                {{ update_form.hidden_tag() }} {# Assumes update_form is passed from route #}
+                                {{ update_form.quantity(class="form-control form-control-sm me-2", value=item.quantity, style="width: 65px;", min="1") }} {# Set min value #}
+                                <button type="submit" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Update Quantity"><i class="bi bi-arrow-repeat"></i></button>
+                                {% if update_form.quantity.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in update_form.quantity.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </form>
+                        </td>
+                        <td style="text-align: right;"><strong>{{ item.subtotal | inr }}</strong></td>
+                        <td style="text-align: center;" class="pe-3">
+                            <a href="{{ url_for('customer.remove_from_cart', toy_id=item.id) }}" class="btn btn-sm btn-outline-danger py-1 px-2" title="Remove Item">
+                                <i class="bi bi-trash3"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                 {# Footer for Total #}
+                 <tfoot class="table-light fw-bold">
+                     <tr>
+                         <td colspan="4" class="text-end pe-3">Grand Total:</td>
+                         <td style="text-align: right;">{{ total_price | inr }}</td>
+                         <td></td> {# Empty cell for actions column #}
+                     </tr>
+                 </tfoot>
+            </table>
+        </div>
+    </div> {# End card-body #}
+</div> {# End card #}
+
+<div class="row mt-4">
+    <div class="col-md-6 mb-3">
+        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Continue Shopping</a>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{{ url_for('customer.checkout') }}" class="btn btn-primary btn-lg">Proceed to Checkout <i class="bi bi-arrow-right"></i></a>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info text-center" role="alert">
+    <h4 class="alert-heading">Your cart is empty!</h4>
+    <p>Looks like you haven't added any toys to your cart yet.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Start Shopping Now</a>
+    </p>
+</div>
+{% endif %}
+{% endblock %}

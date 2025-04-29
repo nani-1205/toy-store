@@ -1,0 +1,128 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+     <h2 class="mb-0">Order Details</h2>
+     <a href="{{ url_for('admin.manage_orders', status=order.status) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Orders</a>
+</div>
+
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+         <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">Order #{{ order._id }}</h5>
+            </div>
+             <div class="col-md-6 text-md-end">
+                  {% set status_class = {
+                        'Pending': 'warning',
+                        'Accepted': 'info',
+                        'Shipped': 'primary',
+                        'Delivered': 'success',
+                        'Cancelled': 'danger'
+                    }.get(order.status, 'secondary') %}
+                 <span class="fs-5">Status: <span class="badge bg-{{ status_class }}">{{ order.status }}</span></span>
+             </div>
+         </div>
+
+    </div>
+    <div class="card-body">
+         <div class="row mb-3">
+             <div class="col-md-4">
+                <strong>Customer:</strong> {{ order.user_username | default('N/A', true) }}
+             </div>
+             <div class="col-md-4">
+                 <strong>Email:</strong> {{ order.user_email | default('N/A', true) }}
+             </div>
+              <div class="col-md-4">
+                 <strong>Phone:</strong> {{ order.phone | default('N/A', true) }}
+             </div>
+         </div>
+         <div class="row mb-3">
+             <div class="col-md-4">
+                 <strong>Order Date:</strong> {{ order.created_at | datetime_ist }}
+             </div>
+              <div class="col-md-4">
+                 <strong>Payment Method:</strong> {{ order.payment_method | default('N/A', true) }}
+             </div>
+             <div class="col-md-4">
+                 <strong>Total Amount:</strong> <span class="fw-bold">{{ order.total_amount | inr }}</span>
+             </div>
+         </div>
+          <div class="row">
+             <div class="col-12">
+                <strong>Shipping Address:</strong><br>
+                <p style="white-space: pre-wrap;">{{ order.shipping_address | default('N/A', true) }}</p>
+             </div>
+          </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Items Ordered</h5>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Price (at order)</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>
+                        {# Link to admin toy view if you implement one, or just show name #}
+                        {# <a href="{{ url_for('admin.edit_toy_details', toy_id=item.toy_id) }}">{{ item.name }}</a> #}
+                        {{ item.name }}
+                        <br><small class="text-muted">ID: {{ item.toy_id }}</small>
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.price | inr }}</td>
+                    <td>{{ (item.price * item.quantity) | inr }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center">No items found in this order (Error?).</td></tr>
+                {% endfor %}
+                 <tr class="table-light">
+                    <td colspan="3" class="text-end fw-bold">Order Total:</td>
+                    <td class="fw-bold">{{ order.total_amount | inr }}</td>
+                 </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if order.status not in ['Delivered', 'Cancelled'] %}
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Update Order Status</h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('admin.update_order_status_route', order_id=order._id) }}" method="POST" class="row g-3 align-items-center">
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+             <div class="col-auto">
+                <label for="statusSelect" class="col-form-label">Change status to:</label>
+             </div>
+            <div class="col-auto">
+                <select class="form-select" id="statusSelect" name="status" required>
+                    {% for status_option in valid_statuses %}
+                        {% if status_option != order.status %} {# Don't show current status as an option #}
+                        <option value="{{ status_option }}">{{ status_option }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Update Status</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

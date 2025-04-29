@@ -1,0 +1,11 @@
+Flask
+python-dotenv
+pymongo[srv] # Use [srv] if your MONGO_URI uses mongodb+srv://
+Flask-PyMongo
+Flask-Login
+Flask-WTF
+email_validator # Required by Flask-WTF for Email validation
+werkzeug # For password hashing and file uploads (if added later)
+pytz # For timezone handling
+Flask-Bcrypt # Better password hashing
+dnspython # Required for mongodb+srv:// URIs

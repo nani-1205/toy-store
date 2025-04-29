@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{# This block allows adding specific CSS or meta tags for customer pages if needed #}
+{% block head_extra %}
+    {{ super() }} {# Include styles from base.html #}
+    {# Add customer-specific CSS links or styles here if necessary #}
+    <style>
+        /* Example: Add specific customer area styling */
+        /* .customer-profile-card { border-left: 3px solid blue; } */
+    </style>
+{% endblock %}
+
+{# The main content block will be filled by specific customer templates #}
+{% block content %}
+    {# Customer pages like dashboard, profile, orders will populate this block #}
+    {% block customer_content %}
+        {# Default content if a specific customer template doesn't define it #}
+         <p>Welcome to the customer area.</p>
+    {% endblock %}
+{% endblock %}
+
+{# This block allows adding specific JS for customer pages if needed #}
+{% block scripts %}
+    {{ super() }} {# Include scripts from base.html #}
+    {# Add customer-specific JS links or inline scripts here if necessary #}
+{% endblock %}

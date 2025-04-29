@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">My Order History</h1>
+
+{% if orders %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Order ID</th>
+                <th>Date Placed</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Items</th>
+                 {# Add View Details button maybe? #}
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td><code>{{ order._id }}</code></td>
+                <td>{{ order.created_at | datetime_ist }}</td>
+                <td><strong>{{ order.total_amount | inr }}</strong></td>
+                <td>
+                    {% set status_class = {
+                        'Pending': 'warning',
+                        'Accepted': 'info',
+                        'Shipped': 'primary',
+                        'Delivered': 'success',
+                        'Cancelled': 'danger'
+                    }.get(order.status, 'secondary') %}
+                    <span class="badge bg-{{ status_class }}">{{ order.status }}</span>
+                </td>
+                 <td>
+                    <ul class="list-unstyled mb-0 small">
+                     {% for item in order.items %}
+                        <li>{{ item.name }} (x{{ item.quantity }})</li>
+                     {% endfor %}
+                     </ul>
+                 </td>
+                 {#
+                 <td>
+                     <button class="btn btn-sm btn-outline-info" disabled>View Details</button> # Maybe add later
+                 </td>
+                 #}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    You haven't placed any orders yet. <a href="{{ url_for('main.index') }}" class="alert-link">Start Shopping!</a>
+</div>
+{% endif %}
+
+{% endblock %}

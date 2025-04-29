@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid"> {# Use container-fluid for full width admin area #}
+    <div class="row">
+        <!-- Admin Sidebar/Navigation -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" id="sidebarMenu">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}" aria-current="page" href="{{ url_for('admin.dashboard') }}">
+                           <i class="bi bi-house-door-fill me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if 'toy' in request.endpoint else '' }}" href="{{ url_for('admin.manage_toys') }}">
+                            <i class="bi bi-joystick me-2"></i> Manage Toys
+                        </a>
+                    </li>
+                     <li class="nav-item">
+                        <a class="nav-link {{ 'active' if 'order' in request.endpoint else '' }}" href="{{ url_for('admin.manage_orders') }}">
+                           <i class="bi bi-box-seam-fill me-2"></i> Manage Orders
+                        </a>
+                    </li>
+                     <li class="nav-item">
+                        <a class="nav-link {{ 'active' if 'user' in request.endpoint else '' }}" href="{{ url_for('admin.manage_users') }}">
+                           <i class="bi bi-people-fill me-2"></i> Manage Users
+                        </a>
+                    </li>
+                     <li class="nav-item">
+                        <a class="nav-link {{ 'active' if 'stat' in request.endpoint else '' }}" href="{{ url_for('admin.stats') }}">
+                           <i class="bi bi-bar-chart-line-fill me-2"></i> Statistics
+                        </a>
+                    </li>
+                </ul>
+                 <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                    <span>Admin Actions</span>
+                </h6>
+                 <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                         <a class="nav-link text-danger" href="{{ url_for('auth.admin_logout') }}">
+                             <i class="bi bi-box-arrow-right me-2"></i> Logout
+                         </a>
+                    </li>
+                 </ul>
+            </div>
+        </nav>
+
+        <!-- Main Admin Content Area -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{{ title }}</h1>
+                 <!-- Optional: Add breadcrumbs or action buttons here -->
+                 {% block admin_actions %}{% endblock %}
+            </div>
+
+            {# Include flash messages within the main content area for admin #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+
+            {% block admin_content %}
+            <!-- Admin specific content goes here -->
+            {% endblock %}
+
+            {# Add a footer specific to admin area or remove default footer #}
+            <footer class="pt-4 my-md-5 pt-md-5 border-top">
+                <div class="row">
+                  <div class="col-12 col-md text-center text-muted">
+                    © {{ now().year }} Kondapalli Toys - Admin Panel
+                  </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+{# Overwrite base styles or add admin-specific styles #}
+<style>
+    body {
+        /* Remove default padding-top if admin navbar isn't fixed or handled differently */
+         /* padding-top: 0; */
+         font-size: .875rem; /* Slightly smaller base font for admin */
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0; /* Stick to top */
+      bottom: 0;
+      left: 0;
+      z-index: 100; /* Behind the navbar if navbar is fixed */
+      padding: 56px 0 0; /* Add padding for top navbar height */
+      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    }
+
+    @media (max-width: 767.98px) {
+      .sidebar {
+        top: 56px; /* Adjust for mobile navbar */
+        padding-top: 0;
+      }
+    }
+
+    .sidebar-sticky {
+      position: relative;
+      top: 0;
+      height: calc(100vh - 56px); /* Adjust based on actual navbar height */
+      padding-top: .5rem;
+      overflow-x: hidden;
+      overflow-y: auto; /* Scrollable contents */
+    }
+
+    .nav-link { color: #333; }
+    .nav-link.active { color: #0d6efd; font-weight: 500; }
+    .nav-link:hover { color: #0a58ca; }
+    .sidebar .nav-link .bi {
+        width: 16px;
+        height: 16px;
+        vertical-align: text-bottom;
+        margin-right: 8px;
+    }
+    .sidebar-heading {
+        font-size: .75rem;
+    }
+    /* Adjust main content padding */
+     main {
+         padding-top: 1.5rem; /* Ensure content below the top header */
+     }
+</style>
+{% endblock %}
+
+{% block scripts %}{% endblock %} {# Override base scripts if needed, or add admin specific ones #}

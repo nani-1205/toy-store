@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">My Profile</h1>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+             <div class="card-header">
+                Update Your Details
+            </div>
+            <div class="card-body">
+                 <div class="alert alert-secondary small">
+                     <strong>Username:</strong> {{ current_user.username }}<br>
+                     <strong>Email:</strong> {{ current_user.email }}
+                     <small>(Username and email cannot be changed here.)</small>
+                 </div>
+
+                <form method="POST" action="{{ url_for('customer.profile') }}" novalidate>
+                    {{ form.hidden_tag() }} {# CSRF Token #}
+
+                    <div class="mb-3">
+                        {{ form.address.label(class="form-label") }} <span class="text-muted">(Shipping Address)</span>
+                        {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), rows=4, placeholder="Enter your full shipping address") }}
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.address.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.phone.label(class="form-label") }} <span class="text-muted">(Contact Number)</span>
+                        {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), placeholder="Enter your 10-digit phone number") }}
+                         {% if form.phone.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.phone.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid">
+                         {{ form.submit(class="btn btn-primary") }}
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

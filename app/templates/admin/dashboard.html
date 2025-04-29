@@ -1,0 +1,159 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="row">
+    {# Stat Card: Total Toys #}
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Toys</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('total_toys', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-joystick fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                 <a href="{{ url_for('admin.manage_toys') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    {# Stat Card: Approved Customers #}
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Approved Customers</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('total_customers', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people-fill fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                 <a href="{{ url_for('admin.manage_users') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    {# Stat Card: Pending Approvals #}
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Pending Approvals</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('pending_approvals', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-plus-fill fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                 <a href="{{ url_for('admin.manage_users') }}#pending-users" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    {# Stat Card: Total Orders #}
+     <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Orders</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('total_orders', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-box-seam-fill fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                <a href="{{ url_for('admin.manage_orders') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+     {# Stat Card: Pending Orders #}
+     <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                            Pending Orders</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('pending_orders', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock-history fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                 <a href="{{ url_for('admin.manage_orders', status='Pending') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+     {# Stat Card: Accepted Orders #}
+     <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-left-dark shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                            Accepted Orders</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.get('accepted_orders', 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle-fill fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+                 <a href="{{ url_for('admin.manage_orders', status='Accepted') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<hr>
+
+<div class="mt-4">
+    <h4>Quick Actions</h4>
+    <a href="{{ url_for('admin.add_new_toy') }}" class="btn btn-success me-2 mb-2"><i class="bi bi-plus-circle-fill"></i> Add New Toy</a>
+    <a href="{{ url_for('admin.manage_orders', status='Pending') }}" class="btn btn-warning me-2 mb-2"><i class="bi bi-bell-fill"></i> View Pending Orders <span class="badge bg-dark">{{ stats.get('pending_orders', 0) }}</span></a>
+    <a href="{{ url_for('admin.manage_users') }}#pending-users" class="btn btn-info mb-2"><i class="bi bi-person-check-fill"></i> View Pending Users <span class="badge bg-dark">{{ stats.get('pending_approvals', 0) }}</span></a>
+</div>
+
+{% endblock %}
+
+{% block head_extra %}
+ {{ super() }} {# Include styles from admin_base #}
+ <style>
+    /* Styles for Admin Dashboard Cards */
+    .card .card-body {
+        padding: 1.25rem;
+    }
+    .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+    .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+    .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
+    .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+    .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
+    .border-left-dark { border-left: 0.25rem solid #5a5c69 !important; }
+
+    .text-xs { font-size: .7rem; }
+    .text-gray-300 { color: #dddfeb !important; }
+    .text-gray-800 { color: #5a5c69 !important; }
+    .font-weight-bold { font-weight: 700 !important; }
+    .shadow { box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15)!important; }
+    .h-100 { height: 100% !important; }
+    .py-2 { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+    .no-gutters { margin-right: 0; margin-left: 0; }
+    .no-gutters > .col, .no-gutters > [class*=col-] { padding-right: 0; padding-left: 0; }
+    .mr-2 { margin-right: .5rem !important; }
+    .mb-1 { margin-bottom: .25rem !important; }
+    .fs-2 { font-size: 1.75rem !important; } /* Bootstrap icon size */
+ </style>
+{% endblock %}

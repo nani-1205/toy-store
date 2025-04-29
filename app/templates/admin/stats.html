@@ -1,0 +1,79 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+{# Replicate dashboard cards or create more detailed charts/tables #}
+
+<div class="row">
+    <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-start-primary py-2">
+            <div class="card-body">
+                <div class="row align-items-center no-gutters">
+                    <div class="col me-2">
+                        <div class="text-uppercase text-primary fw-bold text-xs mb-1"><span>Total Toys</span></div>
+                        <div class="text-dark fw-bold h5 mb-0"><span>{{ stats.get('total_toys', 'N/A') }}</span></div>
+                    </div>
+                    <div class="col-auto"><i class="bi bi-joystick fs-2 text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+     <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-start-success py-2">
+            <div class="card-body">
+                <div class="row align-items-center no-gutters">
+                    <div class="col me-2">
+                        <div class="text-uppercase text-success fw-bold text-xs mb-1"><span>Approved Customers</span></div>
+                        <div class="text-dark fw-bold h5 mb-0"><span>{{ stats.get('total_customers', 'N/A') }}</span></div>
+                    </div>
+                    <div class="col-auto"><i class="bi bi-people-fill fs-2 text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+     <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-start-warning py-2">
+            <div class="card-body">
+                <div class="row align-items-center no-gutters">
+                    <div class="col me-2">
+                        <div class="text-uppercase text-warning fw-bold text-xs mb-1"><span>Pending Approvals</span></div>
+                        <div class="text-dark fw-bold h5 mb-0"><span>{{ stats.get('pending_approvals', 'N/A') }}</span></div>
+                    </div>
+                    <div class="col-auto"><i class="bi bi-person-plus-fill fs-2 text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+     <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-start-info py-2">
+            <div class="card-body">
+                <div class="row align-items-center no-gutters">
+                    <div class="col me-2">
+                        <div class="text-uppercase text-info fw-bold text-xs mb-1"><span>Total Orders</span></div>
+                        <div class="text-dark fw-bold h5 mb-0"><span>{{ stats.get('total_orders', 'N/A') }}</span></div>
+                    </div>
+                    <div class="col-auto"><i class="bi bi-box-seam-fill fs-2 text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Add more detailed stats tables or charts here if needed #}
+{# Example: Top Selling Toys, Revenue Over Time (requires more backend logic) #}
+<div class="alert alert-info mt-4">
+    More detailed statistics and visualizations can be added here (e.g., using Chart.js).
+</div>
+
+{% endblock %}
+
+{% block head_extra %}
+{# Example styles for the stat cards - customize as needed #}
+<style>
+.border-start-primary { border-left: .25rem solid #0d6efd !important; }
+.border-start-success { border-left: .25rem solid #198754 !important; }
+.border-start-info    { border-left: .25rem solid #0dcaf0 !important; }
+.border-start-warning { border-left: .25rem solid #ffc107 !important; }
+.text-xs { font-size: .7rem; }
+.text-gray-300 { color: #dddfeb !important; }
+</style>
+{% endblock %}
