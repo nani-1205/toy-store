@@ -1,4 +1,4 @@
-{# File: app/templates/customer/dashboard.html #}
+{# File: app/templates/customer/customer_dashboard.html #} {# Renamed from dashboard.html #}
 
 {% extends "base.html" %} {# Ensures it uses the main site layout #}
 
@@ -58,7 +58,6 @@
           </a>
           <a href="{{ url_for('customer.order_history') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
             <span><i class="bi bi-receipt me-2"></i> My Orders</span>
-             {# Add order count badge later if needed #}
              <i class="bi bi-chevron-right"></i>
           </a>
           <a href="{{ url_for('customer.list_toys') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
