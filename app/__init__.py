@@ -7,6 +7,8 @@ from flask_bcrypt import Bcrypt
 from bson import ObjectId
 from datetime import datetime
 import pytz
+# Import pymongo errors for more specific exception handling
+import pymongo.errors
 
 from .config import Config
 from .utils import format_inr, format_datetime_ist
@@ -57,14 +59,10 @@ def load_user(user_id):
         else:
             return None # User not found or not approved
     except Exception as e:
-        # Log error during user loading, but don't crash the app here
-        # Use app.logger if available, otherwise print
         logger = getattr(Flask, 'logger', None)
         log_message = f"Error in load_user for ID {user_id}: {e}"
-        if logger:
-             logger.error(log_message)
-        else:
-             print(log_message)
+        if logger: logger.error(log_message)
+        else: print(log_message)
         return None
 
 # --- App Factory Function ---
@@ -79,10 +77,20 @@ def create_app(config_class=Config):
 
     # Initialize Flask extensions WITH the app context
     mongo_uri = app.config['MONGO_URI']
-    db_name = app.config['MONGO_DB_NAME']
+    db_name = app.config['MONGO_DBNAME']
     auth_source = app.config.get('MONGO_AUTH_SOURCE', 'admin')
+    # Ensure MONGO_URI includes retryWrites=true (recommended for modern MongoDB)
+    # Avoid duplicate query params if already present
+    if 'retryWrites' not in mongo_uri:
+        separator = '&' if '?' in mongo_uri else '?'
+        mongo_uri += f"{separator}retryWrites=true"
+
     app.config['MONGO_URI'] = f"{mongo_uri}?authSource={auth_source}"
     app.config['MONGO_DBNAME'] = db_name
+
+    # Configure PyMongo connection settings (optional but good practice)
+    app.config['MONGO_CONNECT_TIMEOUT_MS'] = 5000 # 5 seconds
+    app.config['MONGO_SERVER_SELECTION_TIMEOUT_MS'] = 5000 # 5 seconds
 
     mongo.init_app(app)
     login_manager.init_app(app) # Initialize LoginManager with the app
@@ -97,11 +105,8 @@ def create_app(config_class=Config):
     login_manager.needs_refresh_message_category = 'info'
 
     # --- Define the Unauthorized Handler Callback Function ---
-    # Give it a unique name, define it plainly without a decorator
     def handle_unauthorized():
-        # Decide where to redirect based on the request path
         is_admin_route = request and hasattr(request, 'blueprint') and request.blueprint == 'admin'
-
         if is_admin_route:
             flash('You need to log in as an admin to access this page.', 'warning')
             return redirect(url_for('auth.admin_login'))
@@ -111,10 +116,10 @@ def create_app(config_class=Config):
             return redirect(url_for('auth.login', next=next_url))
 
     # --- Assign the Handler Function Directly ---
-    # Instead of using the decorator, assign the function to the manager's handler
     login_manager.unauthorized_handler(handle_unauthorized)
 
     # --- Register Blueprints ---
+    # Import blueprints *after* extensions are initialized
     from .routes import main_bp, auth_bp, admin_bp, customer_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -149,41 +154,89 @@ def create_app(config_class=Config):
 
     @app.errorhandler(500)
     def internal_error(error):
-        # Log the error including traceback
         app.logger.error(f"Server Error: {error}", exc_info=True)
-        # Avoid database operations in the 500 handler if the error might be DB related
         return render_template('500.html'), 500
 
-    # --- Database Check/Index Creation ---
-    # Use app_context for operations needing app configuration
+    # --- Database Initialization and Verification ---
+    # Use app_context for operations needing app configuration and extensions
     with app.app_context():
+        db_connection_ok = False
         try:
-            # Test connection and get server info
-            print("Attempting to connect to MongoDB...")
-            server_info = mongo.cx.server_info() # This line will raise an error if connection fails
+            # 1. Verify connection to the server
+            print("Attempting to connect to MongoDB server...")
+            # Increase timeout slightly for server_info() which can sometimes be slow
+            server_info = mongo.cx.server_info(serverSelectionTimeoutMS=6000)
             print(f"Successfully connected to MongoDB server v{server_info['version']}")
-            print(f"Using database: {mongo.db.name}")
 
-            # Create indexes (idempotent - safe to run every time)
-            print("Checking/creating database indexes...")
-            mongo.db.users.create_index('email', unique=True, background=True)
-            mongo.db.users.create_index('username', unique=True, background=True)
-            mongo.db.toys.create_index('name', background=True)
-            mongo.db.orders.create_index('user_id', background=True)
-            mongo.db.orders.create_index('created_at', background=True)
-            print(f"Indexes checked/created on collections: {mongo.db.list_collection_names()}")
+            # 2. Attempt a minimal write operation to verify/trigger DB/collection creation
+            #    This is the crucial step. If this fails, permissions are likely the issue.
+            target_db_name = app.config['MONGO_DBNAME']
+            print(f"Attempting first write operation (create_index on 'users') in database '{target_db_name}'...")
+            # Access the database directly via the client connection 'cx'
+            db_handle = mongo.cx[target_db_name]
+            # Try creating the first index. This will fail if user 'jagan' lacks write permissions
+            # on 'kondapalli_toys_db', even if the DB doesn't exist yet.
+            db_handle.users.create_index('email', unique=True, background=True)
+            print(f"Successfully accessed/created 'users' collection and 'email' index in '{target_db_name}'.")
+
+            # 3. If the first write worked, proceed with other indexes
+            print("Checking/creating remaining indexes...")
+            db_handle.users.create_index('username', unique=True, background=True)
+            db_handle.toys.create_index('name', background=True)
+            db_handle.orders.create_index('user_id', background=True)
+            db_handle.orders.create_index('created_at', background=True)
+            print(f"All indexes checked/created.")
+
+            # 4. Confirm we can now access mongo.db (should be valid after successful write)
+            if mongo.db is not None and mongo.db.name == target_db_name:
+                print(f"Successfully obtained handle to database: {mongo.db.name}")
+                db_connection_ok = True
+            else:
+                 # This case should be rare if create_index succeeded, but good to check
+                 print(f"WARNING: Write operation succeeded, but mongo.db handle is still not valid for '{target_db_name}'.")
+
+
+        except pymongo.errors.OperationFailure as e:
+            # Specific handling for MongoDB command failures (often authorization)
+            print(f"\n!!! --- FATAL: MongoDB Operation Failure --- !!!")
+            print(f"Error Details: {e.details}")
+            print(f"Message: {e}")
+            if e.has_error_label("AuthenticationFailed"):
+                print("Reason: Authentication failed. Check username/password/authSource.")
+            elif "command createIndexes requires authentication" in str(e) or \
+                 "not authorized on" in str(e) or \
+                 "CommandNotAuthorized" in str(e):
+                 print(f"Reason: Authorization failed. User 'jagan' (authenticating via '{auth_source}') likely lacks permissions (e.g., readWrite, dbAdmin) on database '{db_name}'.")
+            else:
+                print("Reason: Could be permissions, configuration, or other MongoDB issue.")
+            print("Application startup failed.")
+            raise e # Re-raise to stop the app
+
+        except pymongo.errors.ConnectionFailure as e:
+            # Handles errors like server not reachable, connection refused
+            print(f"\n!!! --- FATAL: MongoDB Connection Failure --- !!!")
+            print(f"Error Details: {e}")
+            print(f"Reason: Could not connect to MongoDB server at specified URI.")
+            print("Check MongoDB server status, network connectivity, IP address, port, and firewalls.")
+            print("Application startup failed.")
+            raise e # Re-raise to stop the app
 
         except Exception as e:
-            # Log the specific connection error
-            print(f"\n!!! --- FATAL: Error connecting to MongoDB or creating indexes --- !!!")
+            # Catch any other unexpected errors during initialization
+            print(f"\n!!! --- FATAL: Unexpected Error during DB Initialization --- !!!")
+            print(f"Error type: {type(e).__name__}")
             print(f"Error details: {e}")
             print("Application startup failed.")
-            print("Please check your MONGO_URI, network configuration, firewall, and MongoDB server status.")
-            # --- >>> CRITICAL CHANGE FOR DEBUGGING <<< ---
-            # Re-raise the exception to stop the Flask app from starting incorrectly.
-            # This will make the actual connection error visible in PM2 logs.
-            raise e
-            # --- >>> END CRITICAL CHANGE <<< ---
+            raise e # Re-raise to stop the app
 
-    print("Flask application initialized successfully.") # Add success message
+        # Final check
+        if not db_connection_ok:
+             # If we somehow got here without raising an exception but DB is not ok
+             print(f"\n!!! --- FATAL: Database connection verified but handle ('mongo.db') is not available. --- !!!")
+             print("Application startup failed.")
+             # Raise a generic exception if specific one wasn't caught
+             raise RuntimeError(f"Failed to obtain a valid handle for database '{app.config['MONGO_DBNAME']}' after connection verification.")
+
+
+    print("Flask application initialization and database checks completed successfully.")
     return app
