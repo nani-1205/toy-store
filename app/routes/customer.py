@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, session, abort
+from flask import render_template, redirect, url_for, flash, request, session, abort, current_app
 from flask_login import login_required, current_user
 from bson import ObjectId
 import datetime
@@ -17,7 +17,7 @@ from ..forms import AddressPhoneForm, UpdateProfileForm, CartUpdateForm
 def dashboard():
     """Customer dashboard - shows profile info and links."""
     user_data = find_user_by_id(current_user.get_id()) # Reload data if needed
-    # --- >>> RENAMED TEMPLATE <<< ---
+    # Use the renamed customer dashboard template
     return render_template('customer_dashboard.html', title='My Dashboard', user_data=user_data)
 
 @customer_bp.route('/profile', methods=['GET', 'POST'])
@@ -29,7 +29,7 @@ def profile():
         flash("Could not load your profile data.", "danger")
         return redirect(url_for('customer.dashboard')) # Redirect using the correct endpoint name
 
-    form = UpdateProfileForm(obj=user_data) # Use obj for GET pre-population
+    form = UpdateProfileForm(obj=user_data)
 
     if form.validate_on_submit():
         success = update_user_profile(
@@ -46,7 +46,7 @@ def profile():
          form.address.data = user_data.get('address', '')
          form.phone.data = user_data.get('phone', '')
 
-    # Corrected template name if you rename profile.html too (optional)
+    # Assumes template name is profile.html in customer folder
     return render_template('profile.html', title='My Profile', form=form)
 
 
@@ -55,7 +55,7 @@ def profile():
 def list_toys():
     """Show all available toys to the customer."""
     toys = get_all_toys(in_stock_only=True)
-    # Corrected template name
+    # Assumes template name is toy_list.html in customer folder
     return render_template('toy_list.html', title='Our Toys', toys=toys)
 
 @customer_bp.route('/toy/<toy_id>')
@@ -65,12 +65,11 @@ def toy_detail(toy_id):
     if not toy or toy.get('stock', 0) <= 0:
         flash('Toy not found or unavailable.', 'warning')
         return redirect(url_for('main.index'))
-    # Corrected template name
+    # Assumes template name is toy_detail.html in customer folder
     return render_template('toy_detail.html', title=toy['name'], toy=toy)
 
 
 # --- Cart Management ---
-# (Cart routes remain the same, using view_cart, add_to_cart, update_cart_item, remove_from_cart)
 @customer_bp.route('/cart')
 @login_required
 def view_cart():
@@ -78,7 +77,6 @@ def view_cart():
     cart = session.get('cart', {})
     cart_items = []
     total_price = 0.0
-    db = get_db() # Get db handle if needed inside (not currently needed here)
 
     for toy_id, item_data in cart.items():
         subtotal = item_data['price'] * item_data['quantity']
@@ -94,14 +92,13 @@ def view_cart():
 
     update_form = CartUpdateForm() # For inline updates
 
-    # Corrected template name
+    # Assumes template name is cart.html in customer folder
     return render_template('cart.html', title='Shopping Cart', cart_items=cart_items, total_price=total_price, update_form=update_form)
 
 
 @customer_bp.route('/cart/add/<toy_id>', methods=['POST'])
-@login_required # Require login to add to cart
+@login_required
 def add_to_cart(toy_id):
-    # (Logic remains the same)
     toy = find_toy_by_id(toy_id)
     if not toy:
         flash('Toy not found.', 'danger')
@@ -130,24 +127,23 @@ def add_to_cart(toy_id):
                 flash(f"{toy['name']} is now out of stock.", 'warning')
                 return redirect(request.referrer or url_for('main.index'))
         else:
-            return redirect(request.referrer or url_for('customer.view_cart')) # Use correct endpoint
+            return redirect(request.referrer or url_for('customer.view_cart'))
 
     cart[toy_id] = cart_item
     session['cart'] = cart
     session.modified = True
 
     flash(f"{toy['name']} (x{quantity}) added to cart.", 'success')
-    return redirect(request.referrer or url_for('customer.view_cart')) # Use correct endpoint
+    return redirect(request.referrer or url_for('customer.view_cart'))
 
 
 @customer_bp.route('/cart/update/<toy_id>', methods=['POST'])
 @login_required
 def update_cart_item(toy_id):
-    # (Logic remains the same)
     cart = session.get('cart', {})
     if toy_id not in cart:
         flash('Item not found in cart.', 'danger')
-        return redirect(url_for('customer.view_cart')) # Use correct endpoint
+        return redirect(url_for('customer.view_cart'))
 
     form = CartUpdateForm()
     if form.validate_on_submit():
@@ -159,22 +155,22 @@ def update_cart_item(toy_id):
         if not toy or toy.get('stock', 0) < new_quantity:
             stock_available = toy.get('stock', 0) if toy else 0
             flash(f"Cannot update quantity. Only {stock_available} of {cart[toy_id]['name']} in stock.", 'warning')
-            return redirect(url_for('customer.view_cart')) # Use correct endpoint
+            return redirect(url_for('customer.view_cart'))
 
         cart[toy_id]['quantity'] = new_quantity
         session['cart'] = cart
         session.modified = True
         flash('Cart updated.', 'success')
     else:
-        flash('Invalid quantity.', 'danger')
+        current_app.logger.warning(f"Cart update validation failed for toy {toy_id}: {form.errors}")
+        flash('Invalid quantity submitted.', 'danger')
 
-    return redirect(url_for('customer.view_cart')) # Use correct endpoint
+    return redirect(url_for('customer.view_cart'))
 
 
 @customer_bp.route('/cart/remove/<toy_id>')
 @login_required
 def remove_from_cart(toy_id):
-    # (Logic remains the same)
     cart = session.get('cart', {})
     if toy_id in cart:
         removed_item_name = cart[toy_id]['name']
@@ -184,14 +180,13 @@ def remove_from_cart(toy_id):
         flash(f'{removed_item_name} removed from cart.', 'success')
     else:
         flash('Item not found in cart.', 'warning')
-    return redirect(url_for('customer.view_cart')) # Use correct endpoint
+    return redirect(url_for('customer.view_cart'))
 
 
 # --- Checkout Process ---
 @customer_bp.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
-    # (Logic remains the same)
     cart = session.get('cart', {})
     if not cart:
         flash('Your cart is empty.', 'warning')
@@ -200,7 +195,7 @@ def checkout():
     user_data = find_user_by_id(current_user.get_id())
     if not user_data:
          flash('Error loading your profile. Please try again.', 'danger')
-         return redirect(url_for('customer.view_cart')) # Use correct endpoint
+         return redirect(url_for('customer.view_cart'))
 
     form = AddressPhoneForm()
 
@@ -237,7 +232,7 @@ def checkout():
             total_amount += item_data['price'] * item_data['quantity']
 
         if not stock_ok:
-            return redirect(url_for('customer.view_cart')) # Use correct endpoint
+            return redirect(url_for('customer.view_cart'))
 
         order_id = create_order(
             user_id=current_user.get_id(),
@@ -276,7 +271,7 @@ def checkout():
         })
         total_price_display += subtotal
 
-    # Corrected template name
+    # Assumes template name is checkout.html in customer folder
     return render_template('checkout.html',
                            title='Checkout',
                            form=form,
@@ -287,16 +282,18 @@ def checkout():
 @customer_bp.route('/order_confirmation/<order_id>')
 @login_required
 def order_confirmation(order_id):
-    # (Logic remains the same)
-    # Corrected template name
+    """Show a confirmation page after successful checkout."""
+    # Assumes template name is order_confirmation.html in customer folder
     return render_template('order_confirmation.html', title='Order Confirmed', order_id=order_id)
 
 
 # --- Order History ---
-@customer_bp.route('/orders')
+@customer_bp.route('/orders') # URL remains /customer/orders
 @login_required
 def order_history():
     """Displays the customer's past orders."""
     orders = get_orders_by_user(current_user.get_id())
-    # Corrected template name
-    return render_template('orders.html', title='My Orders', orders=orders)
+    # --- RENDER THE CORRECT CUSTOMER TEMPLATE ---
+    # Uses order_history.html located in app/templates/customer/
+    # **Ensure this file exists or change to 'orders.html' if that's your file**
+    return render_template('order_history.html', title='My Orders', orders=orders)
