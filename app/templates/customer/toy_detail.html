@@ -1,3 +1,5 @@
+{# File: app/templates/customer/toy_detail.html #}
+
 {% extends "base.html" %}
 
 {% block title %}{{ toy.name }} - Kondapalli Toys{% endblock %}
@@ -13,7 +15,9 @@
 
 <div class="row mt-4">
     <div class="col-md-6 mb-4">
-        <img src="{{ toy.image_url or url_for('static', filename='images/default_toy.png') }}" class="img-fluid rounded shadow-sm border" alt="{{ toy.name }}" style="max-height: 500px; display: block; margin: auto;">
+        {# --- >>> VERIFY/CORRECT THIS IMAGE SRC <<< --- #}
+        <img src="{{ url_for('static', filename=toy.image_path) if toy.image_path else url_for('static', filename='images/default_toy.png') }}" class="img-fluid rounded shadow-sm border" alt="{{ toy.name }}" style="max-height: 500px; display: block; margin: auto;">
+        {# --- >>> END IMAGE SRC CORRECTION <<< --- #}
     </div>
     <div class="col-md-6">
         <h1>{{ toy.name }}</h1>
@@ -31,7 +35,7 @@
 
         {% if toy.stock > 0 %}
             <form method="POST" action="{{ url_for('customer.add_to_cart', toy_id=toy._id) }}" class="mt-4">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/> {# Add CSRF if form submission needs it #}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                  <div class="row align-items-center g-3">
                      <div class="col-auto">
                         <label for="quantity" class="col-form-label fw-bold">Quantity:</label>
@@ -47,9 +51,6 @@
         {% else %}
             <button class="btn btn-secondary btn-lg mt-4" disabled>Out of Stock</button>
         {% endif %}
-
-         {# Add sections for reviews, related products etc. later if needed #}
-
     </div>
 </div>
 {% endblock %}
