@@ -1,10 +1,13 @@
-{% macro render_field(field, placeholder=None, type=None, **kwargs) %}
+{# File: app/templates/_formhelpers.html #}
+
+{% macro render_field(field, placeholder=None, type=None) %} {# Removed **kwargs from definition #}
   <div class="mb-3">
     {{ field.label(class="form-label") }}
     {% set class_list = ["form-control"] %}
     {% if field.errors %}
       {% do class_list.append("is-invalid") %}
     {% endif %}
+    {# Pass the implicit kwargs dict to the field rendering call #}
     {% if type %}
       {{ field(class=" ".join(class_list), placeholder=placeholder or field.label.text, type=type, **kwargs) }}
     {% else %}
@@ -23,8 +26,3 @@
      {% endif %}
   </div>
 {% endmacro %}
-
-{# Example Usage in another template:
-   {{ render_field(form.name) }}
-   {{ render_field(form.price, type="number") }}
-#}
