@@ -7,7 +7,8 @@
     <div class="row">
         <!-- Admin Sidebar/Navigation -->
         <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" id="sidebarMenu">
-            <div class="position-sticky pt-3">
+            {# Note: position-sticky might need tweaking depending on exact layout goals #}
+            <div class="position-sticky pt-3 sidebar-sticky">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}" aria-current="page" href="{{ url_for('admin.dashboard') }}">
@@ -40,7 +41,8 @@
                 </h6>
                  <ul class="nav flex-column mb-2">
                     <li class="nav-item">
-                         <a class="nav-link text-danger" href="{{ url_for('auth.admin_logout') }}">
+                         {# --- CORRECTED LOGOUT LINK --- #}
+                         <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
                              <i class="bi bi-box-arrow-right me-2"></i> Logout
                          </a>
                     </li>
@@ -59,12 +61,16 @@
             {# Include flash messages within the main content area for admin #}
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <div class="row">
+                        <div class="col-md-12">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
                 {% endif %}
             {% endwith %}
 
@@ -77,7 +83,7 @@
             <footer class="pt-4 my-md-5 pt-md-5 border-top">
                 <div class="row">
                   <div class="col-12 col-md text-center text-muted">
-                    © {{ now().year }} Kondapalli Toys - Admin Panel
+                    © {{ now.year }} Kondapalli Toys - Admin Panel
                   </div>
                 </div>
             </footer>
@@ -90,7 +96,7 @@
 {# Overwrite base styles or add admin-specific styles #}
 <style>
     body {
-        /* Remove default padding-top if admin navbar isn't fixed or handled differently */
+        /* Admin uses its own layout, so maybe don't need top padding from base */
          /* padding-top: 0; */
          font-size: .875rem; /* Slightly smaller base font for admin */
     }
@@ -103,27 +109,38 @@
       z-index: 100; /* Behind the navbar if navbar is fixed */
       padding: 56px 0 0; /* Add padding for top navbar height */
       box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+      /* Allow vertical scroll if content overflows */
+      overflow-y: auto;
     }
 
+    /* Ensure sidebar doesn't overlap content on smaller screens when toggled */
     @media (max-width: 767.98px) {
       .sidebar {
-        top: 56px; /* Adjust for mobile navbar */
-        padding-top: 0;
+        /* Adjust position or display based on how mobile nav works */
+        position: fixed; /* Keep fixed or change as needed */
+        /* Example: Ensure full height */
+        height: 100vh;
+        padding-top: 56px; /* Match navbar height */
+      }
+      /* Adjust main content's margin when sidebar might be open */
+      main.col-md-9 {
+        margin-left: 0; /* Reset margin if needed */
       }
     }
 
     .sidebar-sticky {
-      position: relative;
-      top: 0;
-      height: calc(100vh - 56px); /* Adjust based on actual navbar height */
-      padding-top: .5rem;
-      overflow-x: hidden;
-      overflow-y: auto; /* Scrollable contents */
+      /* Use this class if you want the inner content to scroll, not the whole sidebar nav */
+      /* position: relative; */
+      /* top: 0; */
+      /* height: calc(100vh - 56px); /* Adjust based on actual navbar height */ */
+      /* padding-top: .5rem; */
+      /* overflow-x: hidden; */
+      /* overflow-y: auto; /* Scrollable contents */ */
     }
 
     .nav-link { color: #333; }
-    .nav-link.active { color: #0d6efd; font-weight: 500; }
-    .nav-link:hover { color: #0a58ca; }
+    .nav-link.active { color: #0d6efd; font-weight: 500; background-color: rgba(0, 123, 255, 0.1); border-radius: 0.25rem;}
+    .nav-link:hover { color: #0a58ca; background-color: rgba(0,0,0,.05); border-radius: 0.25rem;}
     .sidebar .nav-link .bi {
         width: 16px;
         height: 16px;
@@ -140,4 +157,8 @@
 </style>
 {% endblock %}
 
-{% block scripts %}{% endblock %} {# Override base scripts if needed, or add admin specific ones #}
+{# Override base scripts block to prevent potential conflicts if needed #}
+{% block scripts %}
+    {{ super() }} {# Include scripts from base.html if needed #}
+    {# Add admin specific JS here #}
+{% endblock %}
