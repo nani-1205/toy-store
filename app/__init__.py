@@ -1,3 +1,5 @@
+# File: app/__init__.py
+
 import os
 from flask import Flask, session, g, render_template, request, redirect, url_for, flash
 from flask_pymongo import PyMongo
@@ -19,7 +21,6 @@ csrf = CSRFProtect()
 bcrypt = Bcrypt()
 
 # --- User Loader ---
-# (User Loader code remains the same)
 @login_manager.user_loader
 def load_user(user_id):
     # Check admin first (session-based, not in DB)
@@ -59,47 +60,61 @@ def load_user(user_id):
         else:
             return None # User not found or not approved
     except Exception as e:
+        # Use app logger if available during request, otherwise print
         logger = getattr(Flask, 'logger', None)
         log_message = f"Error in load_user for ID {user_id}: {e}"
         if logger: logger.error(log_message)
         else: print(log_message)
         return None
 
-
 # --- App Factory Function ---
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
+
+    # --- >>> ENABLE JINJA 'DO' EXTENSION <<< ---
+    # Add the 'do' extension right after creating the app instance
+    app.jinja_env.add_extension('jinja2.ext.do')
+    # --- >>> END ENABLE JINJA 'DO' EXTENSION <<< ---
+
+    # Load configuration from the Config class (which reads from .env)
     app.config.from_object(config_class)
 
+    # Ensure instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
-    # --- Revised DB Config Section ---
+    # --- DB Config Section ---
+    # Get values loaded from Config / .env file
     mongo_uri_base = app.config.get('MONGO_URI')
     db_name_from_env = app.config.get('MONGO_DB_NAME')
     auth_source = app.config.get('MONGO_AUTH_SOURCE')
 
+    # Basic check if essential DB config is missing
     if not mongo_uri_base: raise ValueError("MONGO_URI not found in config.")
     if not db_name_from_env: raise ValueError("MONGO_DB_NAME not found in config.")
 
+    # Build the options string carefully
     options = {}
     if auth_source: options['authSource'] = auth_source
     if 'retryWrites' not in mongo_uri_base: options['retryWrites'] = 'true'
 
+    # Construct the final URI
     final_mongo_uri = mongo_uri_base
     if options:
         separator = '&' if '?' in final_mongo_uri else '?'
         options_string = '&'.join([f"{key}={value}" for key, value in options.items()])
         final_mongo_uri += f"{separator}{options_string}"
 
+    # Set the final computed URI and DB name in the app config
     app.config['MONGO_URI'] = final_mongo_uri
     app.config['MONGO_DBNAME'] = db_name_from_env
 
     print(f"Final computed MONGO_URI: {app.config['MONGO_URI']}")
     print(f"Using MONGO_DBNAME: {app.config['MONGO_DBNAME']}")
 
+    # Configure PyMongo connection settings (optional)
     app.config['MONGO_CONNECT_TIMEOUT_MS'] = 5000
     app.config['MONGO_SERVER_SELECTION_TIMEOUT_MS'] = 5000
 
@@ -110,13 +125,13 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
 
     # --- Configure Flask-Login settings ---
-    # (Settings remain the same)
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
+    login_manager.needs_refresh_message = 'To protect your account, please reauthenticate.'
+    login_manager.needs_refresh_message_category = 'info'
 
     # --- Define and Assign Unauthorized Handler ---
-    # (Handler definition remains the same)
     def handle_unauthorized():
         is_admin_route = request and hasattr(request, 'blueprint') and request.blueprint == 'admin'
         if is_admin_route:
@@ -128,18 +143,14 @@ def create_app(config_class=Config):
             return redirect(url_for('auth.login', next=next_url))
     login_manager.unauthorized_handler(handle_unauthorized)
 
-
     # --- Register Blueprints ---
-    # (Blueprint registration remains the same)
     from .routes import main_bp, auth_bp, admin_bp, customer_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(customer_bp, url_prefix='/customer')
 
-
     # --- Context Processors ---
-    # (Context processor remains the same)
     @app.context_processor
     def inject_global_vars():
         cart = session.get('cart', {})
@@ -156,15 +167,11 @@ def create_app(config_class=Config):
             now=datetime.now
         )
 
-
     # --- Jinja Filters ---
-    # (Filters remain the same)
     app.jinja_env.filters['inr'] = format_inr
     app.jinja_env.filters['datetime_ist'] = format_datetime_ist
 
-
     # --- Error Handlers ---
-    # (Error handlers remain the same)
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
@@ -173,7 +180,6 @@ def create_app(config_class=Config):
     def internal_error(error):
         app.logger.error(f"Server Error: {error}", exc_info=True)
         return render_template('500.html'), 500
-
 
     # --- Database Initialization and Verification (Simplified Check) ---
     with app.app_context():
@@ -190,9 +196,7 @@ def create_app(config_class=Config):
             db_handle.users.create_index('email', unique=True, background=True)
             print(f"Successfully verified write access to '{target_db_name}' (index created/verified).")
 
-            # 3. Create other indexes (optional here, can be done on demand)
-            #    We've proven connection & write access, maybe skip remaining index checks at startup?
-            #    Let's keep them for now to ensure schema readiness.
+            # 3. Create other indexes
             print("Checking/creating remaining indexes...")
             db_handle.users.create_index('username', unique=True, background=True)
             db_handle.toys.create_index('name', background=True)
@@ -200,45 +204,21 @@ def create_app(config_class=Config):
             db_handle.orders.create_index('created_at', background=True)
             print(f"All indexes checked/created.")
 
-            # --- >>> REMOVED the problematic final check on mongo.db <<< ---
-            # We trust that if the above worked, Flask-PyMongo will provide
-            # the correct mongo.db handle within request contexts later.
-
         except pymongo.errors.OperationFailure as e:
             print(f"\n!!! --- FATAL: MongoDB Operation Failure --- !!!")
-            print(f"Error Details: {e.details}")
-            auth_user = 'specified in URI' # Simplified logging
-            auth_src = app.config.get('MONGO_AUTH_SOURCE', 'default')
-            print(f"Reason: Authorization failed. User '{auth_user}' (authenticating via '{auth_src}') likely lacks permissions on database '{target_db_name}'.")
-            print("Application startup failed.")
-            raise e
-
+            print(f"Error Details: {e.details}"); auth_user = 'specified in URI'; auth_src = app.config.get('MONGO_AUTH_SOURCE', 'default')
+            print(f"Reason: Authorization failed. User '{auth_user}' (authenticating via '{auth_src}') likely lacks permissions on database '{target_db_name}'."); print("Application startup failed."); raise e
         except pymongo.errors.ConnectionFailure as e:
             print(f"\n!!! --- FATAL: MongoDB Connection Failure --- !!!")
-            print(f"Error Details: {e}")
-            print(f"Reason: Could not connect to MongoDB server.")
-            print("Check MongoDB server status, network connectivity, firewalls.")
-            print("Application startup failed.")
-            raise e
-
+            print(f"Error Details: {e}"); print(f"Reason: Could not connect to MongoDB server."); print("Check MongoDB server status, network connectivity, firewalls."); print("Application startup failed."); raise e
         except pymongo.errors.InvalidURI as e:
              print(f"\n!!! --- FATAL: Invalid MongoDB URI --- !!!")
-             print(f"Error Details: {e}")
-             print(f"The final computed URI was: {app.config.get('MONGO_URI')}")
-             print("Check .env file and URI construction logic.")
-             print("Application startup failed.")
-             raise e
-
+             print(f"Error Details: {e}"); print(f"The final computed URI was: {app.config.get('MONGO_URI')}"); print("Check .env file and URI construction logic."); print("Application startup failed."); raise e
         except Exception as e:
             print(f"\n!!! --- FATAL: Unexpected Error during DB Initialization --- !!!")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error details: {e}")
-            print("Application startup failed.")
-            raise e
+            print(f"Error type: {type(e).__name__}"); print(f"Error details: {e}"); print("Application startup failed."); raise e
 
-        # If we reach here, the critical checks passed.
         print("Database connection verified and initial setup completed.")
-
 
     print("Flask application initialization completed successfully.")
     return app
