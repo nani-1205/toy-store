@@ -19,6 +19,7 @@ csrf = CSRFProtect()
 bcrypt = Bcrypt()
 
 # --- User Loader ---
+# (User Loader code remains the same as previous version)
 @login_manager.user_loader
 def load_user(user_id):
     # Check admin first (session-based, not in DB)
@@ -75,28 +76,47 @@ def create_app(config_class=Config):
     except OSError:
         pass
 
-    # --- >>> Start Corrected DB Config Section <<< ---
-    # Get values loaded from Config / .env file first
-    mongo_uri = app.config.get('MONGO_URI')
-    # Use the correct key loaded from Config (with underscore)
+    # --- >>> Start Revised DB Config Section <<< ---
+    # Get values loaded from Config / .env file
+    mongo_uri_base = app.config.get('MONGO_URI') # Get the original URI from .env
     db_name_from_env = app.config.get('MONGO_DB_NAME')
-    auth_source = app.config.get('MONGO_AUTH_SOURCE', 'admin') # Default 'admin' if not set
+    auth_source = app.config.get('MONGO_AUTH_SOURCE') # Get explicitly, handle None later
 
-    # Basic check if essential DB config is missing after loading
-    if not mongo_uri:
+    # Basic check if essential DB config is missing
+    if not mongo_uri_base:
         raise ValueError("MONGO_URI not found in configuration. Check .env file and config.py.")
     if not db_name_from_env:
         raise ValueError("MONGO_DB_NAME not found in configuration. Check .env file and config.py.")
 
-    # Configure MONGO_URI with authSource (ensure retryWrites if needed)
-    if 'retryWrites' not in mongo_uri:
-        separator = '&' if '?' in mongo_uri else '?'
-        mongo_uri += f"{separator}retryWrites=true"
-    app.config['MONGO_URI'] = f"{mongo_uri}?authSource={auth_source}"
+    # Build the options string carefully
+    options = {}
+    if auth_source: # Only add authSource if it's defined in .env/config
+        options['authSource'] = auth_source
+    # Add retryWrites=true by default if not already in the base URI's options
+    # (Requires parsing existing options, simpler to just add if authSource exists for now)
+    # A more robust solution would parse existing options first.
+    # Let's assume retryWrites isn't in the base URI for simplicity here.
+    # If authSource is needed, we likely want retryWrites too.
+    if options: # If we are adding any options (like authSource)
+        options['retryWrites'] = 'true'
 
-    # Explicitly set the key Flask-PyMongo expects using the value from .env
+    # Construct the final URI
+    final_mongo_uri = mongo_uri_base
+    if options:
+        # Check if the base URI already has options
+        separator = '&' if '?' in final_mongo_uri else '?'
+        # Build the options string like "key1=value1&key2=value2"
+        options_string = '&'.join([f"{key}={value}" for key, value in options.items()])
+        final_mongo_uri += f"{separator}{options_string}"
+
+    # Set the final computed URI in the app config
+    app.config['MONGO_URI'] = final_mongo_uri
+    # Explicitly set the key Flask-PyMongo expects for the DB name
     app.config['MONGO_DBNAME'] = db_name_from_env
-    # --- >>> End Corrected DB Config Section <<< ---
+
+    print(f"Final computed MONGO_URI: {app.config['MONGO_URI']}") # Debug print
+    print(f"Using MONGO_DBNAME: {app.config['MONGO_DBNAME']}")    # Debug print
+    # --- >>> End Revised DB Config Section <<< ---
 
 
     # Configure PyMongo connection settings (optional)
@@ -168,7 +188,6 @@ def create_app(config_class=Config):
     # --- Database Initialization and Verification ---
     with app.app_context():
         db_connection_ok = False
-        # Now use the correct key MONGO_DBNAME which we explicitly set above
         target_db_name = app.config['MONGO_DBNAME']
         try:
             # 1. Verify connection to the server
@@ -201,7 +220,9 @@ def create_app(config_class=Config):
             print(f"\n!!! --- FATAL: MongoDB Operation Failure --- !!!")
             print(f"Error Details: {e.details}")
             # ... (rest of specific OperationFailure handling)
-            print(f"Reason: Authorization failed. User '{app.config.get('MONGO_USERNAME', 'UNKNOWN')}' (authenticating via '{auth_source}') likely lacks permissions (e.g., readWrite, dbAdmin) on database '{target_db_name}'.")
+            # Get username from URI if possible (complex parsing needed) or use config default
+            auth_user = app.config.get('MONGO_USERNAME', 'specified in URI') # MONGO_USERNAME not usually set
+            print(f"Reason: Authorization failed. User '{auth_user}' (authenticating via '{app.config.get('MONGO_AUTH_SOURCE', 'default')}') likely lacks permissions (e.g., readWrite, dbAdmin) on database '{target_db_name}'.")
             print("Application startup failed.")
             raise e # Re-raise to stop the app
 
@@ -210,6 +231,15 @@ def create_app(config_class=Config):
             print(f"Error Details: {e}")
             # ... (rest of ConnectionFailure handling)
             raise e # Re-raise to stop the app
+        
+        except pymongo.errors.InvalidURI as e:
+             print(f"\n!!! --- FATAL: Invalid MongoDB URI --- !!!")
+             print(f"Error Details: {e}")
+             print(f"The final computed URI was: {app.config.get('MONGO_URI')}")
+             print("Check the base MONGO_URI in your .env file and the logic for adding options in __init__.py.")
+             print("Ensure special characters in username/password are URL-encoded.")
+             print("Application startup failed.")
+             raise e # Re-raise to stop the app
 
         except Exception as e:
             print(f"\n!!! --- FATAL: Unexpected Error during DB Initialization --- !!!")
