@@ -9,82 +9,96 @@ from flask_bcrypt import Bcrypt
 from bson import ObjectId
 from datetime import datetime
 import pytz
-import pymongo.errors
+import pymongo.errors # Import pymongo errors
 
 from .config import Config # Import Config class
 from .utils import format_inr, format_datetime_ist
 
-# Initialize extensions
+# Initialize extensions (globally accessible)
 mongo = PyMongo()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 bcrypt = Bcrypt()
 
 # --- User Loader ---
-# (User loader code remains the same)
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id == "admin":
+    # Check admin first (session-based, not in DB)
+    if user_id == "admin": # Check specifically for the admin ID
         class AdminUser:
-            is_authenticated = True; is_active = True; is_anonymous = False; id = "admin"
+            is_authenticated = True
+            is_active = True
+            is_anonymous = False
+            id = "admin" # Consistent ID
             def get_id(self): return self.id
             def is_admin(self): return True
-        if session.get('is_admin'): return AdminUser()
-        else: return None
+        # Only return AdminUser if the session confirms admin status
+        if session.get('is_admin'):
+            return AdminUser()
+        else:
+            return None # Prevent loading admin if session flag is missing
+
+    # Check regular customer users from DB
     try:
         from .models import find_user_by_id
-        user_data = find_user_by_id(user_id)
+        user_data = find_user_by_id(user_id) # Use the model function
         if user_data and user_data.get('is_approved', False):
             class User:
-                def __init__(self, data): self._data = data; self.id = str(data['_id']); self.is_authenticated = True; self.is_active = True; self.is_anonymous = False
+                def __init__(self, data):
+                    self._data = data # Store raw data
+                    self.id = str(data['_id'])
+                    self.is_authenticated = True
+                    self.is_active = True
+                    self.is_anonymous = False
                 def get_id(self): return self.id
                 def __getattr__(self, name):
-                    if name in ['username', 'email', 'address', 'phone', 'is_approved']: return self._data.get(name)
+                    if name in ['username', 'email', 'address', 'phone', 'is_approved']:
+                         return self._data.get(name)
                     if name == 'is_admin': return False
                     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
             return User(user_data)
-        else: return None
+        else:
+            return None # User not found or not approved
     except Exception as e:
-        logger = getattr(Flask, 'logger', None); log_message = f"Error in load_user for ID {user_id}: {e}"
-        if logger: logger.error(log_message); else: print(log_message)
+        # --- >>> CORRECTED LOGGING SYNTAX <<< ---
+        logger = getattr(Flask, 'logger', None) # Get logger if available
+        log_message = f"Error in load_user for ID {user_id}: {e}"
+        if logger:
+            logger.error(log_message, exc_info=True) # Add traceback info
+        else:
+            print(log_message) # Fallback to print
+            import traceback
+            traceback.print_exc() # Print traceback if logger not available
+        # --- >>> END CORRECTED LOGGING SYNTAX <<< ---
         return None
 
 # --- App Factory Function ---
+# (Rest of the create_app function remains the same as the previous version)
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
-    # Enable Jinja 'do' extension
     app.jinja_env.add_extension('jinja2.ext.do')
-
-    # Load configuration
     app.config.from_object(config_class)
 
-    # Ensure instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
-    # --- >>> Create Upload Folder if it doesn't exist <<< ---
+    # --- Create Upload Folder ---
     upload_folder = app.config.get('UPLOAD_FOLDER')
     if upload_folder:
         if not os.path.exists(upload_folder):
             try:
-                # Create parent directories if they don't exist
                 os.makedirs(upload_folder, exist_ok=True)
                 print(f"Created upload folder: {upload_folder}")
             except OSError as e:
                 print(f"ERROR: Could not create upload folder {upload_folder}: {e}")
-                # Decide whether to stop the app
-                # raise e # Uncomment to fail startup if folder creation fails
         else:
              print(f"Upload folder already exists: {upload_folder}")
     else:
         print("WARNING: UPLOAD_FOLDER not configured in config.py. File uploads will likely fail.")
-    # --- >>> End Create Upload Folder <<< ---
-
 
     # --- DB Config Section ---
-    # (DB Config logic remains the same)
     mongo_uri_base = app.config.get('MONGO_URI')
     db_name_from_env = app.config.get('MONGO_DB_NAME')
     auth_source = app.config.get('MONGO_AUTH_SOURCE')
@@ -105,20 +119,18 @@ def create_app(config_class=Config):
     app.config['MONGO_CONNECT_TIMEOUT_MS'] = 5000
     app.config['MONGO_SERVER_SELECTION_TIMEOUT_MS'] = 5000
 
-    # Initialize extensions AFTER setting config
+    # Initialize extensions
     mongo.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
     bcrypt.init_app(app)
 
     # --- Configure Flask-Login settings ---
-    # (Settings remain the same)
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
 
     # --- Define and Assign Unauthorized Handler ---
-    # (Handler remains the same)
     def handle_unauthorized():
         is_admin_route = request and hasattr(request, 'blueprint') and request.blueprint == 'admin'
         if is_admin_route:
@@ -131,7 +143,6 @@ def create_app(config_class=Config):
     login_manager.unauthorized_handler(handle_unauthorized)
 
     # --- Register Blueprints ---
-    # (Blueprint registration remains the same)
     from .routes import main_bp, auth_bp, admin_bp, customer_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -139,7 +150,6 @@ def create_app(config_class=Config):
     app.register_blueprint(customer_bp, url_prefix='/customer')
 
     # --- Context Processors ---
-    # (Context processor remains the same)
     @app.context_processor
     def inject_global_vars():
         cart = session.get('cart', {})
@@ -157,12 +167,10 @@ def create_app(config_class=Config):
         )
 
     # --- Jinja Filters ---
-    # (Filters remain the same)
     app.jinja_env.filters['inr'] = format_inr
     app.jinja_env.filters['datetime_ist'] = format_datetime_ist
 
     # --- Error Handlers ---
-    # (Error handlers remain the same)
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
@@ -172,8 +180,7 @@ def create_app(config_class=Config):
         app.logger.error(f"Server Error: {error}", exc_info=True)
         return render_template('500.html'), 500
 
-    # --- Database Initialization and Verification (Simplified Check) ---
-    # (DB Init code remains the same)
+    # --- Database Initialization and Verification ---
     with app.app_context():
         target_db_name = app.config['MONGO_DBNAME']
         try:
@@ -204,7 +211,6 @@ def create_app(config_class=Config):
             print(f"\n!!! --- FATAL: Unexpected Error during DB Initialization --- !!!")
             print(f"Error type: {type(e).__name__}"); print(f"Error details: {e}"); print("Application startup failed."); raise e
         print("Database connection verified and initial setup completed.")
-
 
     print("Flask application initialization completed successfully.")
     return app
