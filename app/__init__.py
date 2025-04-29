@@ -57,7 +57,14 @@ def load_user(user_id):
         else:
             return None # User not found or not approved
     except Exception as e:
-        print(f"Error in load_user for ID {user_id}: {e}")
+        # Log error during user loading, but don't crash the app here
+        # Use app.logger if available, otherwise print
+        logger = getattr(Flask, 'logger', None)
+        log_message = f"Error in load_user for ID {user_id}: {e}"
+        if logger:
+             logger.error(log_message)
+        else:
+             print(log_message)
         return None
 
 # --- App Factory Function ---
@@ -142,25 +149,41 @@ def create_app(config_class=Config):
 
     @app.errorhandler(500)
     def internal_error(error):
+        # Log the error including traceback
         app.logger.error(f"Server Error: {error}", exc_info=True)
+        # Avoid database operations in the 500 handler if the error might be DB related
         return render_template('500.html'), 500
 
     # --- Database Check/Index Creation ---
+    # Use app_context for operations needing app configuration
     with app.app_context():
         try:
-            server_info = mongo.cx.server_info()
+            # Test connection and get server info
+            print("Attempting to connect to MongoDB...")
+            server_info = mongo.cx.server_info() # This line will raise an error if connection fails
             print(f"Successfully connected to MongoDB server v{server_info['version']}")
             print(f"Using database: {mongo.db.name}")
+
+            # Create indexes (idempotent - safe to run every time)
+            print("Checking/creating database indexes...")
             mongo.db.users.create_index('email', unique=True, background=True)
             mongo.db.users.create_index('username', unique=True, background=True)
             mongo.db.toys.create_index('name', background=True)
             mongo.db.orders.create_index('user_id', background=True)
             mongo.db.orders.create_index('created_at', background=True)
             print(f"Indexes checked/created on collections: {mongo.db.list_collection_names()}")
-        except Exception as e:
-            print(f"\n!!! --- WARNING: Error connecting to MongoDB or creating indexes --- !!!")
-            print(f"Error details: {e}")
-            print("The application might not function correctly without a database connection.")
-            print("Please check your MONGO_URI and network connectivity.")
 
+        except Exception as e:
+            # Log the specific connection error
+            print(f"\n!!! --- FATAL: Error connecting to MongoDB or creating indexes --- !!!")
+            print(f"Error details: {e}")
+            print("Application startup failed.")
+            print("Please check your MONGO_URI, network configuration, firewall, and MongoDB server status.")
+            # --- >>> CRITICAL CHANGE FOR DEBUGGING <<< ---
+            # Re-raise the exception to stop the Flask app from starting incorrectly.
+            # This will make the actual connection error visible in PM2 logs.
+            raise e
+            # --- >>> END CRITICAL CHANGE <<< ---
+
+    print("Flask application initialized successfully.") # Add success message
     return app
