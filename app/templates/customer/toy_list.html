@@ -1,28 +1,31 @@
-{% extends "base.html" %} {# Or extend customer_base.html if using it #}
+{# File: app/templates/customer/toy_list.html #}
+
+{% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block content %} {# Or block customer_content if extending customer_base.html #}
+{% block content %}
 <h1 class="mb-4">{{ title }}</h1>
 
 <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
   {% if toys %}
     {% for toy in toys %}
     <div class="col">
-      {# Use the same toy card style as index.html for consistency #}
       <div class="card h-100 shadow-sm toy-card">
-        <img src="{{ toy.image_url or url_for('static', filename='images/default_toy.png') }}" class="card-img-top p-3" alt="{{ toy.name }}">
+        {# --- >>> VERIFY/CORRECT THIS IMAGE SRC <<< --- #}
+        <img src="{{ url_for('static', filename=toy.image_path) if toy.image_path else url_for('static', filename='images/default_toy.png') }}" class="card-img-top p-3" alt="{{ toy.name }}">
+        {# --- >>> END IMAGE SRC CORRECTION <<< --- #}
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">{{ toy.name }}</h5>
-          {# Show a shorter description on the list page if desired #}
-          {# <p class="card-text flex-grow-1">{{ toy.description[:80] }}{% if toy.description|length > 80 %}...{% endif %}</p> #}
           <p class="card-text fs-5 fw-bold text-primary">{{ toy.price | inr }}</p>
           {% if toy.stock > 0 %}
              <span class="text-success small mb-2"><i class="bi bi-check-circle"></i> In Stock</span>
+             {# Ensure stretched-link is on the <a> tag #}
             <a href="{{ url_for('customer.toy_detail', toy_id=toy._id) }}" class="btn btn-outline-primary mt-auto stretched-link">View Details</a>
           {% else %}
-             <span class="text-danger small mb-2"><i class="bi bi-x-circle"></i> Out of Stock</span>
-            <button class="btn btn-outline-secondary mt-auto stretched-link" disabled>View Details</button>
+             <span class="text-danger small mb-2 mt-auto"><i class="bi bi-x-circle"></i> Out of Stock</span>
+             {# Button should also have stretched-link if it's the main clickable element in this state #}
+            <button class="btn btn-outline-secondary stretched-link" disabled>View Details</button>
           {% endif %}
         </div>
       </div>
