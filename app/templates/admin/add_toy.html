@@ -1,5 +1,8 @@
+{# File: app/templates/admin/add_toy.html #}
+
 {% extends "admin_base.html" %}
-{% from "_formhelpers.html" import render_field %} {# Optional: Create this macro for cleaner fields #}
+{# Using the form helper macro #}
+{% from "_formhelpers.html" import render_field %}
 
 {% block admin_content %}
 
@@ -8,62 +11,40 @@
        <h4 class="mb-0">Add New Kondapalli Toy</h4>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.add_new_toy') }}" novalidate>
+        {# --- ADD enctype FOR FILE UPLOAD --- #}
+        <form method="POST" action="{{ url_for('admin.add_new_toy') }}" enctype="multipart/form-data" novalidate>
             {{ form.hidden_tag() }} {# CSRF Token #}
 
-            <div class="mb-3">
-                {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Enter toy name") }}
-                {% if form.name.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.name.errors %}<span>{{ error }}</span>{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="mb-3">
-                {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4, placeholder="Describe the toy") }}
-                {% if form.description.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.description.errors %}<span>{{ error }}</span>{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+            {{ render_field(form.name, placeholder="Enter toy name") }}
+            {{ render_field(form.description, rows=4, placeholder="Describe the toy") }}
 
              <div class="row">
                  <div class="col-md-6 mb-3">
+                    {# Manual rendering for price with symbol #}
                     {{ form.price.label(class="form-label") }}
                     <div class="input-group">
                         <span class="input-group-text">₹</span>
                         {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else ""), placeholder="0.00") }}
                          {% if form.price.errors %}
-                            <div class="invalid-feedback">
+                            <div class="invalid-feedback d-block"> {# Ensure feedback shows #}
                                 {% for error in form.price.errors %}<span>{{ error }}</span>{% endfor %}
                             </div>
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="col-md-6 mb-3">
-                    {{ form.stock.label(class="form-label") }}
-                    {{ form.stock(class="form-control" + (" is-invalid" if form.stock.errors else ""), type="number", placeholder="Quantity available") }}
-                    {% if form.stock.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.stock.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
+                    {{ render_field(form.stock, type="number", placeholder="Quantity available") }}
                 </div>
             </div>
 
-
-            <div class="mb-3">
-                {{ form.image_url.label(class="form-label") }}
-                {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""), placeholder="https://example.com/image.jpg") }}
-                 <div class="form-text">Enter the full URL of the toy image.</div>
-                {% if form.image_url.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.image_url.errors %}<span>{{ error }}</span>{% endfor %}
+            {# --- Render File Field --- #}
+             <div class="mb-3">
+                {{ form.image.label(class="form-label") }} <span class="text-danger">* Required</span>
+                {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
+                 <div class="form-text">Allowed formats: JPG, PNG, GIF.</div>
+                {% if form.image.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.image.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                 {% endif %}
             </div>

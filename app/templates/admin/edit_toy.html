@@ -1,5 +1,7 @@
+{# File: app/templates/admin/edit_toy.html #}
+
 {% extends "admin_base.html" %}
-{% from "_formhelpers.html" import render_field %} {# Optional: Create this macro #}
+{% from "_formhelpers.html" import render_field %}
 
 {% block admin_content %}
 
@@ -8,28 +10,12 @@
        <h4 class="mb-0">Edit Toy Details</h4>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.edit_toy_details', toy_id=toy_id) }}" novalidate>
+         {# --- ADD enctype FOR FILE UPLOAD --- #}
+        <form method="POST" action="{{ url_for('admin.edit_toy_details', toy_id=toy_id) }}" enctype="multipart/form-data" novalidate>
             {{ form.hidden_tag() }} {# CSRF Token #}
 
-            <div class="mb-3">
-                {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Enter toy name") }}
-                {% if form.name.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.name.errors %}<span>{{ error }}</span>{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="mb-3">
-                {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4, placeholder="Describe the toy") }}
-                {% if form.description.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.description.errors %}<span>{{ error }}</span>{% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+            {{ render_field(form.name, placeholder="Enter toy name") }}
+            {{ render_field(form.description, rows=4, placeholder="Describe the toy") }}
 
              <div class="row">
                  <div class="col-md-6 mb-3">
@@ -38,40 +24,45 @@
                         <span class="input-group-text">₹</span>
                         {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else ""), placeholder="0.00") }}
                          {% if form.price.errors %}
-                            <div class="invalid-feedback">
+                            <div class="invalid-feedback d-block">
                                 {% for error in form.price.errors %}<span>{{ error }}</span>{% endfor %}
                             </div>
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="col-md-6 mb-3">
-                    {{ form.stock.label(class="form-label") }}
-                    {{ form.stock(class="form-control" + (" is-invalid" if form.stock.errors else ""), type="number", placeholder="Quantity available") }}
-                    {% if form.stock.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.stock.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
+                     {{ render_field(form.stock, type="number", placeholder="Quantity available") }}
                 </div>
             </div>
 
-
+            {# --- Show Current Image --- #}
             <div class="mb-3">
-                {{ form.image_url.label(class="form-label") }}
-                {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""), placeholder="https://example.com/image.jpg") }}
-                 <div class="form-text">Enter the full URL of the toy image.</div>
-                {% if form.image_url.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.image_url.errors %}<span>{{ error }}</span>{% endfor %}
+                <label class="form-label">Current Image:</label>
+                {% if toy and toy.image_path %} {# Check for toy object and image_path #}
+                    <div class="mb-2">
+                        <img src="{{ url_for('static', filename=toy.image_path) }}" alt="Current {{ toy.name }} image" style="max-height: 150px; max-width: 100%;" class="img-thumbnail">
+                        <p class="small text-muted mt-1">Path: {{ toy.image_path }}</p>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No current image available.</p>
+                {% endif %}
+            </div>
+
+            {# --- Render File Field for Uploading New Image --- #}
+             <div class="mb-3">
+                {{ form.image.label(class="form-label") }} <span class="text-muted small">(Optional: Upload to replace current image)</span>
+                {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
+                 <div class="form-text">Allowed formats: JPG, PNG, GIF.</div>
+                {% if form.image.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.image.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                 {% endif %}
             </div>
 
-
             <div class="mt-4 d-flex justify-content-end">
                 <a href="{{ url_for('admin.manage_toys') }}" class="btn btn-secondary me-2">Cancel</a>
-                {{ form.submit(class="btn btn-primary", value="Update Toy") }} {# Changed button text #}
+                {{ form.submit(class="btn btn-primary", value="Update Toy") }}
             </div>
         </form>
     </div>

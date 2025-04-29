@@ -1,3 +1,5 @@
+# File: app/config.py
+
 import os
 from dotenv import load_dotenv
 
@@ -14,10 +16,20 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     MONGO_URI = os.environ.get('MONGO_URI')
     MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME')
-    MONGO_AUTH_SOURCE = os.environ.get('MONGO_AUTH_SOURCE') # Optional, depends on your MongoDB setup
+    MONGO_AUTH_SOURCE = os.environ.get('MONGO_AUTH_SOURCE') # Optional
 
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME') or 'admin'
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'password' # Default if not set
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'password'
+
+    # --- >>> Upload Folder Configuration <<< ---
+    # Store uploads inside the static folder relative to the app's root path
+    # Example: kondapalli_toys/app/static/uploads/toys
+    UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads', 'toys')
+
+    # Optional: Max upload size (e.g., 5MB) - Flask default is unlimited
+    # MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+    # --- >>> End Upload Folder Configuration <<< ---
+
 
     # Basic sanity checks
     if not SECRET_KEY or SECRET_KEY == 'a_very_strong_random_secret_key_please_change_me':
@@ -28,3 +40,5 @@ class Config:
         raise ValueError("No MONGO_DB_NAME set. Set MONGO_DB_NAME in your .env file.")
     if not ADMIN_PASSWORD or ADMIN_PASSWORD == 'your_secure_admin_password':
          print("Warning: Default or example ADMIN_PASSWORD used. Set a strong ADMIN_PASSWORD in your .env file.")
+    if not os.path.exists(basedir): # Check if base path calculation is valid
+         print(f"Warning: Calculated base directory '{basedir}' does not exist.")
